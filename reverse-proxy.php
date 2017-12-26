@@ -58,6 +58,8 @@ function massage_url ($url) {
     return "$proto://$host$keep_this_part";
 }
 
-add_filter('login_url', 'EPFL\\ReverseProxy\\massage_url');
-add_filter('admin_url', 'EPFL\\ReverseProxy\\massage_url');
-add_filter('site_url',  'EPFL\\ReverseProxy\\massage_url');
+foreach (['login_url', 'login_redirect',
+          'home_url', 'admin_url', 'site_url',
+          'logout_url', 'logout_redirect'] as $filter) {
+    add_filter($filter, 'EPFL\\ReverseProxy\\massage_url');
+}
