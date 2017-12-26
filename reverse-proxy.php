@@ -58,22 +58,6 @@ function massage_url ($url) {
     return "$proto://$host$keep_this_part";
 }
 
-add_filter('login_url', 'EPFL\\ReverseProxy\\filter_login_url', 10, 3);
-/**
- * "login_url" filter for e.g. unauthenticated access to admin pages.
- *
- * There is no way to intercept an attempt to access the admin pages
- * in case the cookie is missing or invalid; in this case, WordPress
- * insists on redirecting to the URL returned by this filter.
- * At least arrange to navigage back to the same site.
- */
-function filter_login_url ($login_url, $redirect, $force_reauth)
-{
-    return massage_url($login_url);
-}
-
-add_filter('admin_url', 'EPFL\\ReverseProxy\\filter_admin_url', 10, 3);
-function filter_admin_url ($url, $path, $blog_id)
-{
-    return massage_url($url);
-}
+add_filter('login_url', 'EPFL\\ReverseProxy\\massage_url');
+add_filter('admin_url', 'EPFL\\ReverseProxy\\massage_url');
+add_filter('site_url',  'EPFL\\ReverseProxy\\massage_url');
