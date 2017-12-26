@@ -63,3 +63,17 @@ foreach (['login_url', 'login_redirect',
           'logout_url', 'logout_redirect'] as $filter) {
     add_filter($filter, 'EPFL\\ReverseProxy\\massage_url');
 }
+
+add_filter('redirect_canonical',
+           'EPFL\\ReverseProxy\\filter_redirect_canonical', 10, 2);
+/**
+ * Prevent redirection if the headers indicate we are already in the right place.
+ */
+function filter_redirect_canonical ($redirect_url, $requested_url)
+{
+    if (massage_url($redirect_url) === $redirect_url) {
+        // No point in sending a 302 that will bring us right back here
+        return false;
+    }
+    return $redirect_url;
+}
