@@ -37,14 +37,15 @@ function massage_url ($url) {
         return $keep_this_part;
     }
 
-    if ($_SERVER['HTTP_X_FORWARDED_PROTO']) {
+    if (array_key_exists('HTTP_X_FORWARDED_PROTO', $_SERVER)) {
         $proto = strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']);
-    } elseif ($_SERVER['HTTPS']) {
+    } elseif (array_key_exists('HTTPS', $_SERVER) &&
+              $_SERVER['HTTPS']) {
         $proto = "https";
     } else {
         $proto = "http";
     }
-    if ($_SERVER["HTTP_X_FORWARDED_HOST"]) {
+    if (array_key_exists("HTTP_X_FORWARDED_HOST", $_SERVER)) {
         $host = $_SERVER["HTTP_X_FORWARDED_HOST"];
     } else {
         $host = parse_url(get_option('siteurl'), PHP_URL_HOST);
