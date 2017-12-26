@@ -26,11 +26,7 @@ if (! defined('ABSPATH')) {
  */
 function massage_url ($url) {
     /* We don't believe in reverse proxies that rewrite the path: */
-    $keep_this_part = parse_url($url, PHP_URL_PATH);
-    if (parse_url($url, PHP_URL_QUERY)) {
-        $keep_this_part .= "?" . parse_url($url, PHP_URL_QUERY);
-    }
-
+    $keep_this_part = relative_url_part ($url);
     if (! (parse_url($url, PHP_URL_SCHEME) ||
            parse_url($url, PHP_URL_HOST) ||
            parse_url($url, PHP_URL_PORT)) ) {
@@ -59,9 +55,24 @@ function massage_url ($url) {
     return "$proto://$host$keep_this_part";
 }
 
+function relative_url_part ($url) {
+    $retval = parse_url($url, PHP_URL_PATH);
+    if (! $retval) {
+        $retval = "/";
+    }
+    if (parse_url($url, PHP_URL_QUERY)) {
+        $retval .= "?" . parse_url($url, PHP_URL_QUERY);
+    }
+    return $retval;
+}
+
 foreach (['login_url', 'login_redirect',
-          'home_url', 'admin_url', 'site_url',
+          'home_url', 'admin_url',  'site_url', 'wp_get_attachment_url',
           'logout_url', 'logout_redirect'] as $filter) {
+    // TODO: there is undoubtedly a number of cases where we could
+    // forcibly remove the protocol, host and port from the URL i.e.
+    // use 'EPFL\\ReverseProxy\\relative_url_part' as the callback.
+    // Unfortunately it's hard to know for sure, so be conservative.
     add_filter($filter, 'EPFL\\ReverseProxy\\massage_url');
 }
 
