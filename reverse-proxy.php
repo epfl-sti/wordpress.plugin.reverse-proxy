@@ -47,8 +47,8 @@ function massage_url ($url) {
     if ($_SERVER["HTTP_X_FORWARDED_HOST"]) {
         $host = $_SERVER["HTTP_X_FORWARDED_HOST"];
     } else {
-        $host = parse_url(site_url(), PHP_URL_HOST);
-        $port = parse_url(site_url(), PHP_URL_PORT);
+        $host = parse_url(get_option('siteurl'), PHP_URL_HOST);
+        $port = parse_url(get_option('siteurl'), PHP_URL_PORT);
         if (! (($port === 80  && $proto === "http") ||
                ($port === 443 && $proto === "https"))) {
             $host = "$host:$port";
