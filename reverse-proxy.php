@@ -14,6 +14,24 @@ if (! defined('ABSPATH')) {
     die('Access denied.');
 }
 
+/* Mutate $_SERVER[] as soon as possible i.e. now (no hooks): */
+if (array_key_exists("HTTP_X_FORWARDED_HOST", $_SERVER)) {
+    $_SERVER["HTTP_HOST"] = $_SERVER["HTTP_X_FORWARDED_HOST"];
+}
+if (array_key_exists("HTTP_X_FORWARDED_PROTO", $_SERVER)) {
+    if (strtolower($_SERVER["HTTP_X_FORWARDED_PROTO"]) === "https") {
+        $_SERVER["HTTPS"] = 1;
+    } else {
+        unset($_SERVER["HTTPS"]);
+    }
+}
+
+function root_url () {
+    return sprintf("%s://%s",
+                   ($_SERVER["HTTPS"] ? "https" : "http"),
+                    $_SERVER["HTTP_HOST"]);
+}
+
 /**
  * Massage an external URL into making sense upstream from the reverse proxy.
  *
@@ -25,67 +43,56 @@ if (! defined('ABSPATH')) {
  * reverse proxy "grafting" the site at some other URL.
  */
 function massage_url ($url) {
-    /* We don't believe in reverse proxies that rewrite the path: */
-    $keep_this_part = relative_url_part ($url);
-    if (! (parse_url($url, PHP_URL_SCHEME) ||
-           parse_url($url, PHP_URL_HOST) ||
-           parse_url($url, PHP_URL_PORT)) ) {
-        return $keep_this_part;
-    }
-
-    if (array_key_exists('HTTP_X_FORWARDED_PROTO', $_SERVER)) {
-        $proto = strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']);
-    } elseif (array_key_exists('HTTPS', $_SERVER) &&
-              $_SERVER['HTTPS']) {
-        $proto = "https";
+    if (parse_url($url, PHP_URL_SCHEME) ||
+        parse_url($url, PHP_URL_HOST) ||
+        parse_url($url, PHP_URL_PORT)) {
+        $massaged = root_url() . relative_url_part ($url);
+        return $massaged;
     } else {
-        $proto = "http";
+        return $url;
     }
-    if (array_key_exists("HTTP_X_FORWARDED_HOST", $_SERVER)) {
-        $host = $_SERVER["HTTP_X_FORWARDED_HOST"];
-    } else {
-        $host = parse_url(get_option('siteurl'), PHP_URL_HOST);
-        $port = parse_url(get_option('siteurl'), PHP_URL_PORT);
-        if (! (($port === 80  && $proto === "http") ||
-               ($port === 443 && $proto === "https"))) {
-            $host = "$host:$port";
-        }
-    }
-
-    return "$proto://$host$keep_this_part";
 }
 
 function relative_url_part ($url) {
     $retval = parse_url($url, PHP_URL_PATH);
-    if (! $retval) {
-        $retval = "/";
-    }
     if (parse_url($url, PHP_URL_QUERY)) {
         $retval .= "?" . parse_url($url, PHP_URL_QUERY);
     }
     return $retval;
 }
 
-foreach (['login_url', 'login_redirect',
-          'home_url', 'admin_url',  'site_url', 'wp_get_attachment_url',
-          'logout_url', 'logout_redirect'] as $filter) {
-    // TODO: there is undoubtedly a number of cases where we could
-    // forcibly remove the protocol, host and port from the URL i.e.
-    // use 'EPFL\\ReverseProxy\\relative_url_part' as the callback.
-    // Unfortunately it's hard to know for sure, so be conservative.
+function relative_url_part_no_empty ($url) {
+    $retval = relative_url_part($url);
+    if (! $retval) {
+        $retval = "/";
+    }
+    return $retval;
+}
+
+// Sometimes these URLs are sent outside e.g. to a third-party Web SSO system
+// or a newsletter. In other cases, we have to keep absolute URLs in order
+// to paper over various boneheaded behavior in the caller code.
+foreach (['admin_url', 'site_url', 'network_site_url'] as $filter) {
     add_filter($filter, 'EPFL\\ReverseProxy\\massage_url');
 }
 
-add_filter('redirect_canonical',
-           'EPFL\\ReverseProxy\\filter_redirect_canonical', 10, 2);
-/**
- * Prevent redirection if the headers indicate we are already in the right place.
- */
-function filter_redirect_canonical ($redirect_url, $requested_url)
-{
-    if (massage_url($redirect_url) === $redirect_url) {
-        // No point in sending a 302 that will bring us right back here
-        return false;
-    }
-    return $redirect_url;
+// In most cases however, using absolute links is just asking for
+// trouble so we don't:
+foreach (['home_url', 'network_home_url', 
+          'wp_get_attachment_url'] as $filter) {
+    add_filter($filter, 'EPFL\\ReverseProxy\\relative_url_part_no_empty');
 }
+foreach (['login_url', 'login_redirect',
+          'logout_url', 'logout_redirect',
+          'content_url', 'plugins_url', 'includes_url',
+          'theme_root_uri'] as $filter) {
+    add_filter($filter, 'EPFL\\ReverseProxy\\relative_url_part');
+}
+
+/**
+ * Do not use redirect_canonical.
+ *
+ * If we sit behind a reverse proxy, Figuring out which host names are
+ * "wrong" and doing something about it is its job, not ours.
+ */
+remove_filter('template_redirect', 'redirect_canonical');
