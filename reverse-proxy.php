@@ -71,28 +71,37 @@ function relative_url_part_no_empty ($url) {
 
 // Sometimes these URLs are sent outside e.g. to a third-party Web SSO system
 // or a newsletter. In other cases, we have to keep absolute URLs in order
-// to paper over various boneheaded behavior in the caller code.
-foreach (['admin_url', 'site_url', 'network_site_url'] as $filter) {
+// to paper over various boneheaded behavior in the caller code. At least make
+// them bear the correct protocol, host and port number.
+foreach (['admin_url', 'site_url', 'network_site_url',
+          'home_url', 'network_home_url',
+          'content_url', 'plugins_url', 'includes_url',
+          'theme_root_uri'] as $filter) {
     add_filter($filter, 'EPFL\\ReverseProxy\\massage_url');
 }
 
-// In most cases however, using absolute links is just asking for
+// In a lot of cases however, using absolute links is just asking for
 // trouble so we don't:
-foreach (['home_url', 'network_home_url', 
-          'wp_get_attachment_url'] as $filter) {
+foreach (['wp_get_attachment_url'] as $filter) {
     add_filter($filter, 'EPFL\\ReverseProxy\\relative_url_part_no_empty');
 }
 foreach (['login_url', 'login_redirect',
-          'logout_url', 'logout_redirect',
-          'content_url', 'plugins_url', 'includes_url',
-          'theme_root_uri'] as $filter) {
+          'logout_url', 'logout_redirect'] as $filter) {
     add_filter($filter, 'EPFL\\ReverseProxy\\relative_url_part');
 }
 
 /**
- * Do not use redirect_canonical.
+ * Redirects that only change the host part of the URL are not welcome.
  *
- * If we sit behind a reverse proxy, Figuring out which host names are
- * "wrong" and doing something about it is its job, not ours.
+ * Assuming you have a reverse proxy (otherwise why are you using this
+ * plug-in?), you should configure it to deal with these. Redirects
+ * from one page to another (e.g. to manage "slugs", i18n etc) are
+ * still honored.
  */
-remove_filter('template_redirect', 'redirect_canonical');
+add_filter('redirect_canonical', function($to_url, $from_url) {
+    $to_url_relative = relative_url_part($to_url);
+    if ($to_url_relative === relative_url_part($from_url)) {
+        return false;
+    }
+    return root_url() . $to_url_relative;
+}, 10, 2);
