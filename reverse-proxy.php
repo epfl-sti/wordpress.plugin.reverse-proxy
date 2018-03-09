@@ -89,13 +89,24 @@ foreach (['login_url', 'login_redirect',
     add_filter($filter, 'EPFL\\ReverseProxy\\relative_url_part');
 }
 
-// Special data format for this filter
+// Filter urls as part of filterable data structures:
 function filter_upload_dir ($uploads) {
     $uploads['baseurl'] = massage_url($uploads['baseurl']);
     return $uploads;
 }
 
 add_filter('upload_dir', 'EPFL\\ReverseProxy\\filter_upload_dir');
+
+function filter_pll_rel_hreflang_attributes ($hreflangs) {
+    $newhreflangs = array();
+    foreach ($hreflangs as $lang => $url) {
+        $newhreflangs[$lang] = relative_url_part($url);
+    }
+    return $newhreflangs;
+}
+
+add_filter('pll_rel_hreflang_attributes',
+           'EPFL\\ReverseProxy\\filter_pll_rel_hreflang_attributes' );
 
 /**
  * Do not use redirect_canonical.
