@@ -89,6 +89,14 @@ foreach (['login_url', 'login_redirect',
     add_filter($filter, 'EPFL\\ReverseProxy\\relative_url_part');
 }
 
+// Special data format for this filter
+function filter_upload_dir ($uploads) {
+    $uploads['baseurl'] = massage_url($uploads['baseurl']);
+    return $uploads;
+}
+
+add_filter('upload_dir', 'EPFL\\ReverseProxy\\filter_upload_dir');
+
 /**
  * Do not use redirect_canonical.
  *
