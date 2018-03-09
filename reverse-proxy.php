@@ -72,14 +72,14 @@ function relative_url_part_no_empty ($url) {
 // Sometimes these URLs are sent outside e.g. to a third-party Web SSO system
 // or a newsletter. In other cases, we have to keep absolute URLs in order
 // to paper over various boneheaded behavior in the caller code.
-foreach (['admin_url', 'site_url', 'network_site_url'] as $filter) {
+foreach (['admin_url', 'home_url', 'site_url', 
+          'network_home_url', 'network_site_url'] as $filter) {
     add_filter($filter, 'EPFL\\ReverseProxy\\massage_url');
 }
 
 // In most cases however, using absolute links is just asking for
 // trouble so we don't:
-foreach (['home_url', 'network_home_url', 
-          'wp_get_attachment_url'] as $filter) {
+foreach (['wp_get_attachment_url'] as $filter) {
     add_filter($filter, 'EPFL\\ReverseProxy\\relative_url_part_no_empty');
 }
 foreach (['login_url', 'login_redirect',
