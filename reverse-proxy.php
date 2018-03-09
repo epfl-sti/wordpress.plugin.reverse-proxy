@@ -79,7 +79,7 @@ foreach (['admin_url', 'home_url', 'site_url',
 
 // In most cases however, using absolute links is just asking for
 // trouble so we don't:
-foreach (['wp_get_attachment_url'] as $filter) {
+foreach (['wp_get_attachment_url', 'pll_the_language_link'] as $filter) {
     add_filter($filter, 'EPFL\\ReverseProxy\\relative_url_part_no_empty');
 }
 foreach (['login_url', 'login_redirect',
